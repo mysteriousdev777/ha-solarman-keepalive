@@ -1,0 +1,38 @@
+configuration:
+  time:
+    name: Time in replies
+    description: >-
+      The time the server sends to the logger; the logger sets the inverter clock from it.
+      "local" sends the local time of the Home Assistant time zone, as the Solarman cloud does.
+      "utc" sends UTC.
+  timezone:
+    name: Time zone
+    description: >-
+      Time zone for "local", for example Europe/Berlin. Leave it unset to use the time zone
+      of Home Assistant.
+  allowed_ips:
+    name: Allowed logger addresses
+    description: >-
+      Accept connections only from these IP addresses (your logger's address). Empty: accept
+      any address.
+  idle_timeout:
+    name: Idle timeout (minutes)
+    description: >-
+      Close a connection after this many minutes without data. A logger that reboots leaves
+      its old connection open. 0: never.
+  log_level:
+    name: Log level
+    description: >-
+      "info" logs events: logins, reconnects, logger restarts, replies the logger did not
+      accept, and a summary every hour. "debug" also logs every frame, with the logger's
+      serial number and address.
+  frame_log:
+    name: Frame log
+    description: >-
+      Write every frame to frames.log in the app's configuration folder (rotated, up to
+      4 x 5 MB), for troubleshooting and tools/stats.py.
+network:
+  10000/tcp: Logger connections. Point the logger's server settings at this port.
+  8080/tcp: >-
+    Status JSON and health check. Home Assistant reads it over the internal network,
+    so it does not need to be opened on the host.

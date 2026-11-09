@@ -1,0 +1,7 @@
+{
+  "time": "local",
+  "allowed_ips": [],
+  "idle_timeout": 15,
+  "log_level": "info",
+  "frame_log": true
+}

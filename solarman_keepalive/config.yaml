@@ -1,0 +1,35 @@
+name: Solarman Keepalive
+version: "0.1.0"
+slug: solarman_keepalive
+description: >-
+  Local stand-in for the Solarman cloud: keeps a Solarman Wi-Fi logger connected
+  without internet access. Only answers the logger; the time in its answers sets
+  the inverter clock.
+url: https://github.com/mysteriousdev777/ha-solarman-keepalive
+arch:
+  - amd64
+  - aarch64
+init: true
+startup: services
+boot: auto
+ports:
+  10000/tcp: 10000
+  8080/tcp: null
+map:
+  - type: app_config
+    read_only: false
+watchdog: http://[HOST]:[PORT:8080]/health
+options:
+  time: local
+  allowed_ips: []
+  idle_timeout: 15
+  log_level: info
+  frame_log: false
+schema:
+  time: list(local|utc)
+  timezone: str?
+  allowed_ips:
+    - str
+  idle_timeout: int(0,1440)
+  log_level: list(debug|info|warning|error)
+  frame_log: bool

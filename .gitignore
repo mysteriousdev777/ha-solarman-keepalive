@@ -1,0 +1,12 @@
+__pycache__/
+*.py[cod]
+.venv/
+.idea/
+.vscode/
+
+# Frame logs and other logs hold serial numbers and addresses: never publish them
+*.log
+logs/
+
+# Personal strings for tools/privacy_check.py
+.privacy-local
