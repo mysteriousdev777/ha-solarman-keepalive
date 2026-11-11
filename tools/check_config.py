@@ -74,9 +74,9 @@ def main() -> int:
     m = re.search(r"^## (\S+)", read(APP, "CHANGELOG.md"), re.M)
     if not m or m[1] != version:
         errors.append(f"CHANGELOG.md: the first entry must be ## {version}")
-    m = re.search(r'^__version__ = "([^"]+)"', read(APP, "keepalive.py"), re.M)
+    m = re.search(r'^__version__ = "([^"]+)"', read(APP, "keepalive", "__init__.py"), re.M)
     if not m or m[1] != version:
-        errors.append(f"keepalive.py: __version__ must be {version}")
+        errors.append(f"keepalive/__init__.py: __version__ must be {version}")
 
     m = re.search(r"^ARG BUILD_FROM=(\S+)$", read(APP, "Dockerfile"), re.M)
     if not m:

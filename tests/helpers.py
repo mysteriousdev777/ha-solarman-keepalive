@@ -11,7 +11,7 @@ ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, os.path.join(ROOT, "solarman_keepalive"))
 sys.path.insert(0, os.path.join(ROOT, "tools"))
 
-import keepalive as k  # noqa: E402
+from keepalive.config import Config  # noqa: E402
 
 SN = 0x12345678                 # 305419896
 TOTAL_WORKING = 0x032AD0D6
@@ -93,10 +93,10 @@ class FakeLogger:
             pass
 
 
-def config(**kw) -> "k.Config":
+def config(**kw) -> Config:
     base = dict(time="utc", host="127.0.0.1", port=0, status_port=0, idle_timeout=15)
     base.update(kw)
-    return k.Config(**base).validate()
+    return Config(**base).validate()
 
 
 async def http_get(port: int, path: str, method: str = "GET") -> tuple[int, bytes]:

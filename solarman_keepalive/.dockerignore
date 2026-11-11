@@ -1,0 +1,4 @@
+# Python caches from local test runs: keep a local docker build the same as the
+# Supervisor's and CI's, which build from a clean checkout.
+**/__pycache__
+**/*.py[cod]

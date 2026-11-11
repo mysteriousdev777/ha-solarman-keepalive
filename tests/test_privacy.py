@@ -4,27 +4,30 @@ import io
 import logging
 import unittest
 
-from helpers import FakeLogger, config, handshake, k, live, wifi
+from helpers import FakeLogger, config, handshake, live, wifi
+from keepalive.__main__ import setup_logging
+from keepalive.config import TimeSource
+from keepalive.server import KeepaliveServer, log
 
 PRIVATE = ("305419896", "127.0.0.1", "192.0.2.77", "TESTNET1")
 
 
 class PrivacyTest(unittest.IsolatedAsyncioTestCase):
     def tearDown(self):
-        for h in list(k.log.handlers):
-            k.log.removeHandler(h)
-        k.log.setLevel(logging.NOTSET)
+        for h in list(log.handlers):
+            log.removeHandler(h)
+        log.setLevel(logging.NOTSET)
 
     async def session_log(self, level: str) -> str:
-        k.setup_logging(level, None)
-        for h in list(k.log.handlers):          # keep the test output quiet
-            k.log.removeHandler(h)
+        setup_logging(level, None)
+        for h in list(log.handlers):          # keep the test output quiet
+            log.removeHandler(h)
         out = io.StringIO()
         handler = logging.StreamHandler(out)
-        k.log.addHandler(handler)
-        self.addCleanup(k.log.removeHandler, handler)
+        log.addHandler(handler)
+        self.addCleanup(log.removeHandler, handler)
         cfg = config(allowed_ips=["127.0.0.1"])
-        srv = k.KeepaliveServer(cfg, k.TimeSource("utc"))
+        srv = KeepaliveServer(cfg, TimeSource("utc"))
         await srv.start()
         lg = await FakeLogger().connect(srv.port)
         for f in (handshake(), live(40), wifi()):
@@ -32,7 +35,7 @@ class PrivacyTest(unittest.IsolatedAsyncioTestCase):
             await lg.reply()
         await lg.close()
         await srv.stop()
-        k.log.info(srv.tracker.summary(0))
+        log.info(srv.tracker.summary(0))
         return out.getvalue()
 
     async def test_info_log_has_no_private_data(self):

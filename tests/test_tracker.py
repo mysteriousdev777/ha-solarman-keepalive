@@ -1,13 +1,14 @@
 import unittest
 
-from helpers import frame, handshake, heartbeat, k, live, report, wifi
+from helpers import frame, handshake, heartbeat, live, report, wifi
+from keepalive.tracker import Tracker, iso
 
 T0 = 1_800_000_000.0
 
 
 class TrackerTest(unittest.TestCase):
     def setUp(self):
-        self.t = k.Tracker(idle_timeout_s=15 * 60, clock=lambda: T0)
+        self.t = Tracker(idle_timeout_s=15 * 60, clock=lambda: T0)
 
     def feed(self, sid, frame, t, reply="ack"):
         return self.t.frame(sid, frame, t, reply)
@@ -128,8 +129,8 @@ class TrackerTest(unittest.TestCase):
         self.feed(1, live(1000), T0)
         wall = 1_790_000_000.0
         snap = self.t.snapshot(T0 + 10, wall)
-        self.assertEqual(snap["last_frame"], k.iso(wall - 10))
-        self.assertEqual(snap["logger_boot"], k.iso(wall - 1010))
+        self.assertEqual(snap["last_frame"], iso(wall - 10))
+        self.assertEqual(snap["logger_boot"], iso(wall - 1010))
         jumped = self.t.snapshot(T0 + 10, wall + 7200)          # the system clock moved 2 h
         self.assertEqual(jumped["last_frame_age_s"], 10)
         self.assertEqual(jumped["logger_uptime_s"], 1010)

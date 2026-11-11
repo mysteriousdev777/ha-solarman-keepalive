@@ -4,7 +4,8 @@ import unittest
 from unittest import mock
 from zoneinfo import ZoneInfo
 
-from helpers import k
+import helpers  # noqa: F401  (puts the app on sys.path)
+from keepalive.config import ConfigError, TimeSource
 
 
 def utc(*args) -> float:
@@ -21,26 +22,26 @@ def has_zone(name: str) -> bool:
 
 class TimeSourceTest(unittest.TestCase):
     def test_utc(self):
-        ts = k.TimeSource("utc")
+        ts = TimeSource("utc")
         self.assertEqual(ts.now(1762300000.7), 1762300000)
         self.assertEqual(ts.utc_offset(), "+00:00")
 
     def test_local_needs_a_zone(self):
         with mock.patch.dict(os.environ, {}, clear=True):
-            with self.assertRaises(k.ConfigError) as e:
-                k.TimeSource("local")
+            with self.assertRaises(ConfigError) as e:
+                TimeSource("local")
         self.assertIn("time zone", str(e.exception))
 
     def test_unknown_zone(self):
-        with self.assertRaises(k.ConfigError):
-            k.TimeSource("local", "Mars/Olympus_Mons")
+        with self.assertRaises(ConfigError):
+            TimeSource("local", "Mars/Olympus_Mons")
 
     def test_bad_mode(self):
-        with self.assertRaises(k.ConfigError):
-            k.TimeSource("cloud")
+        with self.assertRaises(ConfigError):
+            TimeSource("cloud")
 
     def test_system_zone(self):
-        ts = k.TimeSource("local", "system")
+        ts = TimeSource("local", "system")
         t = 1762300000
         expected = int(dt.datetime.fromtimestamp(t).astimezone().utcoffset().total_seconds())
         self.assertEqual(ts.now(t), t + expected)
@@ -48,12 +49,12 @@ class TimeSourceTest(unittest.TestCase):
     @unittest.skipUnless(has_zone("Europe/Kyiv"), "no time zone database (Windows without tzdata)")
     def test_zone_from_tz_variable(self):
         with mock.patch.dict(os.environ, {"TZ": "Europe/Kyiv"}):
-            ts = k.TimeSource("local")
+            ts = TimeSource("local")
         self.assertEqual(ts.zone_name, "Europe/Kyiv")
 
     @unittest.skipUnless(has_zone("Europe/Kyiv"), "no time zone database (Windows without tzdata)")
     def test_offsets_and_dst(self):
-        ts = k.TimeSource("local", "Europe/Kyiv")
+        ts = TimeSource("local", "Europe/Kyiv")
         cases = [
             (utc(2026, 1, 15, 12), 2 * 3600),
             (utc(2026, 7, 15, 12), 3 * 3600),

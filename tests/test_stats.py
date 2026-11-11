@@ -2,8 +2,12 @@ import os
 import tempfile
 import unittest
 
-import stats
-from helpers import FakeLogger, config, frame, handshake, k, live, wifi
+from helpers import FakeLogger, config, frame, handshake, live, wifi  # first: puts tools/ on sys.path
+import stats  # noqa: E402
+from keepalive.__main__ import setup_logging
+from keepalive.config import TimeSource
+from keepalive.protocol import describe
+from keepalive.server import KeepaliveServer, log
 
 
 class FrameLogFormatTest(unittest.IsolatedAsyncioTestCase):
@@ -12,11 +16,11 @@ class FrameLogFormatTest(unittest.IsolatedAsyncioTestCase):
     async def test_server_log_is_readable(self):
         with tempfile.TemporaryDirectory() as d:
             path = os.path.join(d, "frames.log")
-            k.setup_logging("info", path)
-            for h in list(k.log.handlers):
-                k.log.removeHandler(h)
+            setup_logging("info", path)
+            for h in list(log.handlers):
+                log.removeHandler(h)
             try:
-                srv = k.KeepaliveServer(config(), k.TimeSource("utc"))
+                srv = KeepaliveServer(config(), TimeSource("utc"))
                 await srv.start()
                 lg = await FakeLogger().connect(srv.port)
                 for f in (handshake(), live(40), wifi()):
@@ -25,9 +29,9 @@ class FrameLogFormatTest(unittest.IsolatedAsyncioTestCase):
                 await lg.close()
                 await srv.stop()
             finally:
-                k.setup_logging("info", None)
-                for h in list(k.log.handlers):
-                    k.log.removeHandler(h)
+                setup_logging("info", None)
+                for h in list(log.handlers):
+                    log.removeHandler(h)
             with open(path, encoding="utf-8") as f:
                 r = stats.analyze(stats.parse(f))
         self.assertEqual(r["frames"], 3)
@@ -46,16 +50,16 @@ class AnalyzeTest(unittest.TestCase):
 
     LOG = [
         line("10:00:00", "open  192.0.2.10:5000"),
-        line("10:00:04", k.describe(handshake(up=34))),
+        line("10:00:04", describe(handshake(up=34))),
         line("10:00:04", "-> 0x11 ack time=1768471204 (2026-01-15 10:00:04 as UTC)"),
-        line("10:00:08", k.describe(live(38, s6=0x10))),
-        line("10:05:46", k.describe(live(376, s6=0x35))),     # +37 responses in 338 s
-        line("10:06:20", k.describe(live(410, s6=0x36))),     # sent again 34 s later: not accepted
-        line("10:11:58", k.describe(live(748, s6=0x5b))),
+        line("10:00:08", describe(live(38, s6=0x10))),
+        line("10:05:46", describe(live(376, s6=0x35))),     # +37 responses in 338 s
+        line("10:06:20", describe(live(410, s6=0x36))),     # sent again 34 s later: not accepted
+        line("10:11:58", describe(live(748, s6=0x5b))),
         line("10:12:31", "close 192.0.2.10:5000 after 12 min 31 s, 6 frame(s)"),   # closed 33 s later
         line("10:12:42", "open  192.0.2.10:5001"),
-        line("10:17:36", k.describe(live(1086, s6=0x80))),    # reconnect without login
-        line("10:23:14", k.describe(live(1424, s6=0xa5))),
+        line("10:17:36", describe(live(1086, s6=0x80))),    # reconnect without login
+        line("10:23:14", describe(live(1424, s6=0xa5))),
     ]
 
     def test_metrics(self):
@@ -71,17 +75,17 @@ class AnalyzeTest(unittest.TestCase):
     def test_server_close_is_not_the_logger(self):
         log = [
             line("10:00:00", "open  192.0.2.10:5000"),
-            line("10:00:08", k.describe(live(38))),
+            line("10:00:08", describe(live(38))),
             line("10:00:30", "close 192.0.2.10:5000 after 0 min 30 s, 1 frame(s) (closed by the server: evicted)"),
             line("10:06:00", "open  192.0.2.10:5001"),
-            line("10:06:08", k.describe(live(398))),
+            line("10:06:08", describe(live(398))),
         ]
         self.assertEqual(stats.analyze(stats.parse(log))["not_accepted"], 0)
         logger_close = [x.replace(" (closed by the server: evicted)", "") for x in log]
         self.assertEqual(stats.analyze(stats.parse(logger_close))["not_accepted"], 1)
 
     def test_several_loggers_warn(self):
-        other = line("10:23:20", k.describe(frame(0x47, b"\x00", sn=0x11111111)))
+        other = line("10:23:20", describe(frame(0x47, b"\x00", sn=0x11111111)))
         self.assertIn("WARNING: frames from 2 loggers", stats.report(stats.analyze(stats.parse(self.LOG + [other]))))
         self.assertNotIn("WARNING", stats.report(stats.analyze(stats.parse(self.LOG))))
 

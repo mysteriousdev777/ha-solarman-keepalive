@@ -82,10 +82,11 @@ Things learned on the way, useful when you read the logs:
 
 ## Standalone
 
-The server is one Python file with no dependencies (Python 3.11 or newer):
+The server is a small Python package with no dependencies (Python 3.11 or newer). From the
+`solarman_keepalive` folder:
 
 ```
-python solarman_keepalive/keepalive.py --timezone Europe/Berlin --allow <logger address>
+python -m keepalive --timezone Europe/Berlin --allow <logger address>
 ```
 
 `--help` lists the options. On Windows without the `tzdata` package use
@@ -99,6 +100,11 @@ python tools/stats.py frames.log           # metrics of a frame log
 python tools/privacy_check.py --history    # before every push, see below
 ```
 
+The server is in `solarman_keepalive/keepalive/`: `protocol.py` (Solarman V5 frames and the
+reply), `config.py` (options, time in the replies), `tracker.py` (what the logger does: the
+counters), `server.py` (the logger connections), `status.py` (`/status` and `/health`),
+`__main__.py` (command line and logging).
+
 CI runs the tests on Python 3.11 and 3.14, checks the app definition
 (`tools/check_config.py`), and builds the image for both architectures (amd64, aarch64) on
 native runners and runs it against a fake logger.
@@ -110,7 +116,7 @@ numbers in the files; list your own serial numbers, network names and e-mail add
 
 **Base image.** The Dockerfile pins `ghcr.io/home-assistant/base-python` to a dated tag.
 Change it on purpose, with a CHANGELOG entry and a new version in `config.yaml` and
-`keepalive.py`.
+`keepalive/__init__.py`.
 
 ## License
 

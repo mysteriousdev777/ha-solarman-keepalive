@@ -4,12 +4,15 @@ import time
 import unittest
 from unittest import mock
 
-from helpers import FakeLogger, ack_time, config, frame, handshake, heartbeat, http_get, k, live, report, valid_ack
+from helpers import FakeLogger, ack_time, config, frame, handshake, heartbeat, http_get, live, report, valid_ack
+from keepalive import __version__
+from keepalive.config import TimeSource
+from keepalive.server import CLOCK_MIN, KeepaliveServer, log
 
 
 class ServerTest(unittest.IsolatedAsyncioTestCase):
-    async def start(self, clock=time.time, **kw) -> "k.KeepaliveServer":
-        srv = k.KeepaliveServer(config(**kw), k.TimeSource("utc"), clock=clock)
+    async def start(self, clock=time.time, **kw) -> KeepaliveServer:
+        srv = KeepaliveServer(config(**kw), TimeSource("utc"), clock=clock)
         await srv.start()
         self.addAsyncCleanup(srv.stop)
         return srv
@@ -70,7 +73,7 @@ class ServerTest(unittest.IsolatedAsyncioTestCase):
 
     async def test_rejected_logged_once_per_address(self):
         srv = await self.start(allowed_ips=["192.0.2.10"])
-        with self.assertLogs(k.log, "INFO") as logs:
+        with self.assertLogs(log, "INFO") as logs:
             for _ in range(3):
                 lg = await FakeLogger().connect(srv.port)
                 self.assertTrue(await lg.closed_by_server())
@@ -80,10 +83,10 @@ class ServerTest(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(srv.status()["last_hour"]["rejected"], 3)
 
     async def test_no_reply_while_the_clock_is_not_set(self):
-        now = [k.CLOCK_MIN - 86400]
+        now = [CLOCK_MIN - 86400]
         srv = await self.start(clock=lambda: now[0])
         lg = await self.logger(srv)
-        with self.assertLogs(k.log, "INFO") as logs:
+        with self.assertLogs(log, "INFO") as logs:
             for _ in range(2):
                 await lg.send(heartbeat())
                 self.assertTrue(await lg.no_reply())
@@ -99,7 +102,7 @@ class ServerTest(unittest.IsolatedAsyncioTestCase):
         self.assertTrue(srv.status()["clock_ok"])
 
     async def test_full_house_evicts_the_longest_silent(self):
-        with mock.patch.object(k, "MAX_SESSIONS", 2):
+        with mock.patch("keepalive.server.MAX_SESSIONS", 2):
             srv = await self.start()
             silent = await self.logger(srv)                 # sends nothing
             await asyncio.sleep(0.05)
@@ -117,7 +120,7 @@ class ServerTest(unittest.IsolatedAsyncioTestCase):
             self.assertEqual(srv.tracker.totals["rejected"], 0)
 
     async def test_status_deadline_and_limit(self):
-        with mock.patch.object(k, "STATUS_DEADLINE", 0.5), mock.patch.object(k, "MAX_STATUS_CONNECTIONS", 2):
+        with mock.patch("keepalive.status.DEADLINE", 0.5), mock.patch("keepalive.status.MAX_CONNECTIONS", 2):
             srv = await self.start()
             slow = []
             for _ in range(2):
@@ -185,7 +188,7 @@ class ServerTest(unittest.IsolatedAsyncioTestCase):
     async def test_second_logger_answered_and_warned(self):
         srv = await self.start()
         lg = await self.logger(srv)
-        with self.assertLogs(k.log, "WARNING") as logs:
+        with self.assertLogs(log, "WARNING") as logs:
             await lg.send(heartbeat())
             await lg.reply()
             await lg.send(frame(0x47, b"\x00", sn=0x11111111))
@@ -202,7 +205,7 @@ class ServerTest(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(code, 200)
         s = json.loads(body)
         self.assertTrue(s["connected"])
-        self.assertEqual(s["version"], k.__version__)
+        self.assertEqual(s["version"], __version__)
         self.assertEqual(s["time_mode"], "utc")
         self.assertEqual(s["totals"]["logins"], 1)
         self.assertNotIn("305419896", body.decode(), "no serial number in the status")
@@ -224,7 +227,7 @@ class ServerTest(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(await http_get(srv.status_port, "/health"), (200, b"ok\n"))
 
     async def test_stop_with_open_connection(self):
-        srv = k.KeepaliveServer(config(), k.TimeSource("utc"))
+        srv = KeepaliveServer(config(), TimeSource("utc"))
         await srv.start()
         lg = await FakeLogger().connect(srv.port)
         await lg.send(heartbeat())

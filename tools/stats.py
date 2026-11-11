@@ -10,7 +10,8 @@ worst --window seconds (a local client polling every 30 s shows up as a window w
 replies are lost), and how many responses the logger sent per minute: byte 6 of its frames
 counts every response it sends, to this server and to local Modbus clients.
 
-Reads the log line format written by solarman_keepalive/keepalive.py; keep them in step.
+Reads the log line format the server writes (solarman_keepalive/keepalive: describe() in
+protocol.py, the open/close/ack lines in server.py); keep them in step.
 The metrics assume one logger per log: events are matched by their order, not by connection.
 """
 from __future__ import annotations
